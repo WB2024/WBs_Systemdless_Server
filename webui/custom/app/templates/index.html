@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        /* Minimal inline styles — replace with a proper stylesheet in /static/css/ */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        header {
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #4fc3f7;
+        }
+        header .status-badge {
+            font-size: 0.75rem;
+            background: #1b5e20;
+            color: #a5d6a7;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        main {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .card {
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+        .card h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #888;
+            margin-bottom: 0.75rem;
+        }
+        .card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+        .card .label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        .todo-note {
+            background: #2c2a1a;
+            border: 1px solid #554;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #bbb;
+        }
+        .todo-note code {
+            background: #333;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.75rem;
+            color: #444;
+        }
+        footer a { color: #4fc3f7; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>{{ title }}</h1>
+        <span class="status-badge">OpenRC</span>
+    </header>
+
+    <main>
+        <p style="color: #888; font-size: 0.9rem;">
+            Headless NAS &mdash; Devuan Daedalus + OpenRC &mdash; No systemd
+        </p>
+
+        <!-- Status cards — populated by JavaScript API calls once routes are built -->
+        <div class="card-grid">
+            <div class="card">
+                <h2>Storage Pool</h2>
+                <div class="value" id="pool-usage">—</div>
+                <div class="label">{{ pool_path }}</div>
+            </div>
+            <div class="card">
+                <h2>Services</h2>
+                <div class="value" id="service-count">—</div>
+                <div class="label">OpenRC managed</div>
+            </div>
+            <div class="card">
+                <h2>System</h2>
+                <div class="value" id="uptime">—</div>
+                <div class="label">Uptime</div>
+            </div>
+            <div class="card">
+                <h2>Tailscale</h2>
+                <div class="value" id="tailscale-status">—</div>
+                <div class="label">VPN status</div>
+            </div>
+        </div>
+
+        <div class="todo-note">
+            <strong>Scaffold stub</strong> — This template is a placeholder.
+            Build out routes in <code>app/routes/</code> and update this template
+            to call <code>/api/storage</code>, <code>/api/services</code>, etc.
+            See <code>webui/custom/README.md</code> for next steps.
+            <!-- TODO: DECISION REQUIRED — see Knowledge.md §17 Q1 (Cockpit vs FastAPI) -->
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/WB2024/WBs_Systemdless_Server">
+            WB's Systemdless Server
+        </a>
+        &mdash; MIT License
+    </footer>
+
+    <script>
+        // Health check — confirm the API is reachable
+        fetch('/api/health')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    document.querySelector('.status-badge').textContent = 'API OK';
+                }
+            })
+            .catch(() => {
+                document.querySelector('.status-badge').textContent = 'API Error';
+                document.querySelector('.status-badge').style.background = '#7f1d1d';
+            });
+    </script>
+</body>
+</html>

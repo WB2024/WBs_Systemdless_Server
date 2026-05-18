@@ -1,0 +1,70 @@
+# ============================================================
+# config/network/interfaces.template
+# This is a TEMPLATE. Do not deploy directly.
+# Copy to /etc/network/interfaces and adapt before use.
+# Replace all {{PLACEHOLDER}} tokens with real values.
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# ============================================================
+
+# ---- /etc/network/interfaces for WB's Systemdless Server -----------------
+# Managed by ifupdown (Debian/Devuan standard).
+# No NetworkManager, no systemd-networkd, no netplan.
+# OpenRC's 'networking' service reads this file at boot.
+#
+# Target NIC: Intel I217-V (e1000e driver) on ThinkCentre M73
+# Expected interface name: eno1 (predictable naming by kernel)
+# Verify with: ip link show
+
+# ---- Loopback interface (required) ----------------------------------------
+auto lo
+iface lo inet loopback
+
+# ---- Primary LAN interface — STATIC IP (recommended for a NAS) -----------
+# Static IP = stable, predictable, no DHCP dependency.
+# Set a static IP outside your router's DHCP range to avoid conflicts.
+
+auto eno1
+iface eno1 inet static
+    address   {{STATIC_IP}}
+    # e.g.: address   192.168.1.50
+
+    netmask   {{NETMASK}}
+    # e.g.: netmask   255.255.255.0
+
+    gateway   {{GATEWAY_IP}}
+    # e.g.: gateway   192.168.1.1
+
+    # DNS servers (use your router or a public resolver)
+    dns-nameservers {{DNS_SERVER_1}} {{DNS_SERVER_2}}
+    # e.g.: dns-nameservers 192.168.1.1 1.1.1.1
+
+    # MTU: leave at 1500 unless you know your network supports jumbo frames
+    mtu 1500
+
+    # Wake-on-LAN: enable if you want to remotely power on the NAS
+    # Requires ethtool: pre-up ethtool -s eno1 wol g
+
+# ---- Tailscale virtual interface (managed by tailscaled) -----------------
+# tailscale0 is created and managed by the tailscaled daemon.
+# Do NOT add it here — tailscaled handles it via its own OpenRC init script.
+# It will appear automatically when: rc-service tailscaled start
+
+# ---- Alternative: DHCP configuration (NOT recommended for a NAS) ---------
+# Use this block ONLY during initial setup if static IP isn't ready yet.
+# Replace the static block above with this, then revert to static.
+#
+# auto eno1
+# iface eno1 inet dhcp
+
+# ---- After editing ---------------------------------------------------------
+# Apply changes without rebooting:
+#   ifdown eno1 && ifup eno1
+#
+# Verify:
+#   ip addr show eno1
+#   ip route
+#   ping -c 3 {{GATEWAY_IP}}
+#
+# WARNING: If applying via SSH, the connection will drop during ifdown.
+# Either be physically present, or use a delayed reboot:
+#   shutdown -r +1  (reboots in 1 minute — gives time to prepare)

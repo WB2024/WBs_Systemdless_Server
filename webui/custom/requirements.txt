@@ -1,0 +1,10 @@
+# WB's Systemdless Server — Web UI dependencies
+# Pinned versions for reproducible installs (May 2026)
+# Install into a venv: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+# Do NOT install globally.
+
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+jinja2==3.1.6
+python-multipart==0.0.20
+python-dotenv==1.1.0

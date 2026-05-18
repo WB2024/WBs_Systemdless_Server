@@ -1,0 +1,84 @@
+# ============================================================
+# config/snapraid/snapraid.conf.template
+# This is a TEMPLATE. Do not deploy directly.
+# Use scripts/05-install-snapraid.sh to deploy to /etc/snapraid.conf
+# Replace all {{PLACEHOLDER}} tokens with real values before use.
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# ============================================================
+
+# ---- Parity file(s) --------------------------------------------------------
+# The parity file lives on the designated parity drive.
+# This drive MUST be at least as large as your largest data drive.
+# It should NOT be part of the mergerfs pool — it is SnapRAID's exclusive drive.
+#
+# Single parity = can recover one drive failure.
+# Add 2-parity for two-drive failure recovery (requires a second parity drive).
+
+parity /mnt/parity/snapraid.parity
+# Replace /mnt/parity with the actual mount point of your parity drive.
+# e.g.: parity /mnt/disk0/snapraid.parity
+# (disk0 being the parity-only drive, not in the data pool)
+
+# 2-parity (optional — comment out if using single parity)
+# 2-parity /mnt/parity2/snapraid.parity
+
+# ---- Content files ---------------------------------------------------------
+# Content files store the SnapRAID database (file list + hashes).
+# You need AT LEAST 2 content file copies on different drives.
+# Put one on each data drive and one on the parity drive.
+# More copies = safer (content file loss = no recovery possible).
+
+content /var/snapraid/snapraid.content
+content /mnt/{{DATA_DISK_1}}/snapraid.content
+content /mnt/{{DATA_DISK_2}}/snapraid.content
+# Replace {{DATA_DISK_1}}, {{DATA_DISK_2}} with actual disk mount directories
+# e.g.:
+#   content /mnt/disk1/snapraid.content
+#   content /mnt/disk2/snapraid.content
+
+# ---- Data drives -----------------------------------------------------------
+# List all drives that are PART OF YOUR DATA POOL (in mergerfs).
+# Each line: data <label> <mount_point>
+# The label is arbitrary but must be unique (used in SnapRAID status output).
+
+data d1 /mnt/{{DATA_DISK_1}}
+data d2 /mnt/{{DATA_DISK_2}}
+# data d3 /mnt/{{DATA_DISK_3}}
+# Add more data drives as needed.
+# Example:
+#   data d1 /mnt/disk1
+#   data d2 /mnt/disk2
+#   data d3 /mnt/disk3
+
+# ---- Exclude patterns ------------------------------------------------------
+# Files and directories SnapRAID will NOT include in parity protection.
+# These are typically temporary, cached, or metadata files.
+
+exclude *.bak
+exclude *.tmp
+exclude /lost+found/
+exclude .Trash*/
+exclude .recycle/
+
+# Exclude mergerfs metadata (not real data)
+exclude .mergerfs
+
+# Exclude Docker volumes from SnapRAID (Docker manages its own data)
+# If /srv/pool is your mergerfs mount, Docker volumes should be
+# in /var/lib/docker (outside the pool) — exclude them from data drives.
+exclude /var/lib/docker/
+
+# ---- Sync behaviour --------------------------------------------------------
+# Block size: amount of data processed per parity computation unit.
+# Default is fine; increase for very large pools.
+# blocksize 256
+
+# ---- Notes -----------------------------------------------------------------
+# After editing this file:
+#   1. Validate:      snapraid status (before first sync — will show config errors)
+#   2. Initial sync:  snapraid sync   (VERY long for large pools — run in screen or tmux)
+#   3. Check:         snapraid status
+#   4. Scrub:         snapraid scrub
+#
+# On a ThinkCentre M73 with USB HDDs, the first sync may take hours.
+# Use: snapraid sync | tee /var/log/snapraid-initial.log

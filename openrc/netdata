@@ -1,0 +1,47 @@
+#!/sbin/openrc-run
+# =============================================================================
+# openrc/netdata
+# Purpose:  OpenRC init script for Netdata system monitoring daemon.
+#           Used when Netdata's own installer does not provide an init script,
+#           or when a custom configuration is needed.
+#           Deploy to: /etc/init.d/netdata
+#           Enable:    rc-update add netdata default
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# Created:  2026-05-18
+# =============================================================================
+
+description="Netdata Real-time System Monitoring"
+
+# Netdata installed to /usr by the kickstart installer
+command="/usr/sbin/netdata"
+
+# Configuration and runtime directories
+readonly NETDATA_CONF_DIR="/etc/netdata"
+readonly NETDATA_RUN_DIR="/var/run/netdata"
+readonly NETDATA_LOG_DIR="/var/log/netdata"
+readonly NETDATA_USER="netdata"
+readonly NETDATA_GROUP="netdata"
+
+command_args="-P /var/run/netdata/netdata.pid -c ${NETDATA_CONF_DIR}/netdata.conf"
+command_user="${NETDATA_USER}"
+pidfile="/var/run/netdata/netdata.pid"
+command_background="yes"
+
+stdout_log="${NETDATA_LOG_DIR}/netdata.log"
+stderr_log="${NETDATA_LOG_DIR}/error.log"
+
+depend() {
+    need net
+    after net
+    use dns logger
+}
+
+start_pre() {
+    # Ensure runtime directory exists and is owned by netdata user
+    checkpath --directory --owner "${NETDATA_USER}:${NETDATA_GROUP}" \
+        --mode 0755 "${NETDATA_RUN_DIR}"
+
+    # Ensure log directory exists
+    checkpath --directory --owner "${NETDATA_USER}:${NETDATA_GROUP}" \
+        --mode 0755 "${NETDATA_LOG_DIR}"
+}

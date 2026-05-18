@@ -1,0 +1,56 @@
+# ============================================================
+# config/mergerfs/fstab-entry.template
+# This is a TEMPLATE. Do not deploy directly.
+# Append the relevant line to /etc/fstab after editing.
+# scripts/04-install-mergerfs.sh handles deployment.
+# Replace all {{PLACEHOLDER}} tokens with real values before use.
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# ============================================================
+
+# ---- How mergerfs fstab entries work ------------------------------------
+# mergerfs uses a FUSE filesystem that unions multiple directories.
+# Format:
+#   <source_glob>  <mountpoint>  fuse.mergerfs  <options>  0  0
+#
+# The source is a colon-separated list of directories (or a glob).
+# Each source directory is a separately-mounted data drive.
+# The mountpoint is where the unified pool appears.
+
+# ---- Replace these paths with your actual disk mount points -------------
+# Data drives must already be in /etc/fstab and mounted before mergerfs.
+# Example individual drive entries (add before the mergerfs line):
+#
+#   UUID={{DISK1_UUID}}  /mnt/disk1  ext4  defaults,nofail  0  2
+#   UUID={{DISK2_UUID}}  /mnt/disk2  ext4  defaults,nofail  0  2
+#
+# Get UUIDs with: blkid /dev/sdX
+# Use UUIDs (not /dev/sdX) for stable identification across reboots.
+
+# ---- mergerfs pool entry ------------------------------------------------
+# Adjust /mnt/disk1:/mnt/disk2 to match your actual data drive mount points.
+# Add more drives with additional colon-separated paths.
+
+/mnt/disk1:/mnt/disk2  /srv/pool  fuse.mergerfs  defaults,allow_other,use_ino,cache.files=off,moveonenospc=1,dropcacheonclose=true,minfreespace=20G,fsname=pool  0  0
+
+# ---- Option explanations ------------------------------------------------
+# defaults        : standard fuse options (auto_unmount, nodev, nosuid)
+# allow_other     : non-root users (e.g., Samba, Docker) can access the pool
+# use_ino         : use real inode numbers from underlying FS (needed for rsync)
+# cache.files=off : disable page cache — avoids stale data with multiple writers
+# moveonenospc=1  : when a drive is full, move new writes to another drive
+# dropcacheonclose: drop file cache on close — reduces stale-read risk
+# minfreespace=20G: don't fill any drive below 20GB free
+# fsname=pool     : label shown in 'df' output
+
+# ---- After adding to /etc/fstab -----------------------------------------
+# Test the entry without rebooting:
+#   mount /srv/pool
+#
+# Verify it mounted:
+#   mount | grep pool
+#   df -h /srv/pool
+#
+# If mount fails, check:
+#   1. mergerfs is installed: which mergerfs
+#   2. /mnt/disk1, /mnt/disk2 are mounted: mount | grep /mnt/disk
+#   3. /srv/pool directory exists: ls /srv/pool

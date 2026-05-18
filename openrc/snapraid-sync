@@ -1,0 +1,63 @@
+#!/sbin/openrc-run
+# =============================================================================
+# openrc/snapraid-sync
+# Purpose:  OpenRC service to manually trigger a SnapRAID sync + scrub.
+#           This is a one-shot service — it runs sync once and exits.
+#           It is NOT added to boot via rc-update; call it manually or from cron.
+#
+#           Usage: rc-service snapraid-sync start
+#
+#           For scheduled syncs, the daily cron at /etc/cron.daily/snapraid-sync
+#           is the primary mechanism (installed by 05-install-snapraid.sh).
+#           This service exists for manual on-demand triggering.
+#
+#           Deploy to: /etc/init.d/snapraid-sync
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# Created:  2026-05-18
+# =============================================================================
+
+description="SnapRAID On-Demand Sync and Scrub"
+
+# Deviation from standard OpenRC pattern:
+# snapraid-sync is a one-shot process, not a persistent daemon.
+# command_background is NOT set — OpenRC waits for the command to exit.
+# This is intentional: sync must complete before any other operation proceeds.
+
+command="/usr/bin/snapraid"
+command_args="sync"
+command_user="root"
+
+readonly SNAPRAID_LOG="/var/log/snapraid-sync.log"
+
+start_pre() {
+    # Ensure SnapRAID config exists before attempting sync
+    if [[ ! -f /etc/snapraid.conf ]]; then
+        eerror "/etc/snapraid.conf not found."
+        eerror "Run scripts/05-install-snapraid.sh and configure the file first."
+        return 1
+    fi
+
+    # Ensure log file exists
+    checkpath --file --owner root:root --mode 0640 "${SNAPRAID_LOG}"
+
+    einfo "Starting SnapRAID sync — this may take several minutes for large pools."
+    einfo "Log: ${SNAPRAID_LOG}"
+}
+
+start() {
+    ebegin "Running SnapRAID sync"
+    {
+        echo "===== SnapRAID sync: $(date '+%Y-%m-%d %H:%M:%S') ====="
+        snapraid sync
+        echo "--- Scrubbing 10% of data blocks ---"
+        snapraid scrub -p 10 -o 8
+        echo "===== Sync complete: $(date '+%Y-%m-%d %H:%M:%S') ====="
+    } >> "${SNAPRAID_LOG}" 2>&1
+    eend $?
+}
+
+stop() {
+    # snapraid sync is not a daemon — nothing to stop
+    ebegin "snapraid-sync is a one-shot service (nothing to stop)"
+    eend 0
+}

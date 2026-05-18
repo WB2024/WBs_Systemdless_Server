@@ -1,0 +1,93 @@
+# ============================================================
+# config/caddy/Caddyfile.template
+# This is a TEMPLATE. Do not deploy directly.
+# Adapt and copy to /etc/caddy/Caddyfile before use.
+# Replace all {{PLACEHOLDER}} tokens with real values.
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# ============================================================
+
+# ---- Global options --------------------------------------------------------
+{
+    # Email for Let's Encrypt TLS certificate notifications
+    email {{ADMIN_EMAIL}}
+    # e.g.: email admin@example.com
+
+    # Disable the Caddy admin API endpoint (not needed on a NAS)
+    admin off
+
+    # Log to flat files (no journald)
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size     10mb
+            roll_keep     5
+            roll_keep_for 168h
+        }
+        format console
+    }
+}
+
+# ---- Web UI reverse proxy --------------------------------------------------
+# Replace {{SERVER_HOSTNAME}} with your Tailscale hostname or LAN hostname.
+# TLS is handled automatically by Caddy via ACME (Let's Encrypt or ZeroSSL).
+# For LAN-only access, use an internal CA or disable TLS (see below).
+
+{{SERVER_HOSTNAME}} {
+    # e.g.: nas.yourdomain.com
+    # or:   nas.yourtailnet.ts.net  (Tailscale MagicDNS hostname)
+
+    # Route /api and /static to the FastAPI web UI
+    # TODO: DECISION REQUIRED — see Knowledge.md §17 Q1 (Cockpit vs FastAPI)
+    reverse_proxy /api/*     127.0.0.1:8080
+    reverse_proxy /static/*  127.0.0.1:8080
+    reverse_proxy /          127.0.0.1:8080
+
+    # TLS: Caddy handles ACME automatically for public domains.
+    # For Tailscale hostnames, Tailscale provides TLS certs — disable Caddy TLS:
+    # tls internal
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove Caddy server header (don't advertise software version)
+        -Server
+    }
+}
+
+# ---- Netdata monitoring proxy (optional) -----------------------------------
+# Netdata runs on 127.0.0.1:19999 — expose via subdomain if wanted.
+# Remove this block if you prefer direct access to Netdata's port.
+# Uncomment and configure:
+#
+# monitor.{{SERVER_HOSTNAME}} {
+#     reverse_proxy 127.0.0.1:19999
+#     # Restrict access to Tailscale subnet only
+#     @tailscale_only {
+#         remote_ip 100.64.0.0/10
+#     }
+#     handle @tailscale_only {
+#         reverse_proxy 127.0.0.1:19999
+#     }
+#     respond "Forbidden" 403
+# }
+
+# ---- HTTP redirect (optional) ----------------------------------------------
+# Redirect plain HTTP to HTTPS.
+# Caddy does this automatically when a domain is configured with TLS.
+# No explicit redirect needed in most cases.
+
+# ---- LAN-only / no TLS mode ------------------------------------------------
+# For purely local access without a public domain, comment out the above
+# and use this instead (replace port with your chosen HTTP port):
+#
+# :8443 {
+#     reverse_proxy 127.0.0.1:8080
+#     tls internal
+# }
+
+# ---- After editing ---------------------------------------------------------
+# Validate config:  caddy validate --config /etc/caddy/Caddyfile
+# Reload Caddy:     rc-service caddy reload
+# Check TLS cert:   caddy certificates

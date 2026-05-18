@@ -1,0 +1,77 @@
+# ============================================================
+# config/rsyslog/rsyslog.conf.template
+# This is a TEMPLATE. Do not deploy directly.
+# Copy to /etc/rsyslog.conf and adapt before use.
+# Replace all {{PLACEHOLDER}} tokens with real values.
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# ============================================================
+
+# ---- rsyslog main configuration -------------------------------------------
+# This is a flat-file logging configuration for a non-systemd NAS.
+# NO journald. NO systemd journal. All logs go to /var/log/*.log files.
+# Log rotation is handled by logrotate — see config/logrotate/
+
+# ---- Modules ---------------------------------------------------------------
+# Load the standard input module (kernel messages, etc.)
+module(load="imuxsock")    # Unix socket input (local syslog() calls)
+module(load="imklog")      # Kernel log messages (/proc/kmsg)
+
+# Enable rate-limiting on local input to prevent log floods
+# maxBurst: max messages per interval
+# interval: interval in seconds
+$SystemLogRateLimitInterval 5
+$SystemLogRateLimitBurst 500
+
+# ---- Global settings -------------------------------------------------------
+# Use traditional file sync (fsync after each write) — slower but safer
+# Set to off for better performance on SSDs (data loss risk on power failure)
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+$FileOwner root
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+
+# ---- Rule definitions ------------------------------------------------------
+# Format:  <facility>.<severity>  <destination>
+# Facilities: auth, authpriv, cron, daemon, kern, mail, syslog, user, local0-7
+# Severities: emerg, alert, crit, err, warning, notice, info, debug
+
+# ---- System and kernel logs ------------------------------------------------
+kern.*                          /var/log/kern.log
+*.info;mail.none;authpriv.none;cron.none   /var/log/messages
+
+# ---- Auth logs (SSH, sudo, PAM) -------------------------------------------
+# NOTE: authpriv messages come from SSH, sudo, su, PAM
+authpriv.*                      /var/log/auth.log
+auth.*                          /var/log/auth.log
+
+# ---- Mail system (likely unused on a NAS, but keep for cron notifications) -
+mail.*                          -/var/log/maillog
+
+# ---- Cron daemon -----------------------------------------------------------
+cron.*                          /var/log/cron.log
+
+# ---- Emergency messages to all logged-in users ----------------------------
+*.emerg                         :omusrmsg:*
+
+# ---- Custom application logs -----------------------------------------------
+# WBS services can be configured to use local0-local7 facilities.
+# Configure the relevant service to log to the appropriate facility.
+
+# Samba (smbd logs go to /var/log/samba/ via its own config)
+# Docker (logs go to /var/log/docker.log via daemon.json log-driver)
+# Tailscale (logs to /var/log/tailscaled.log via OpenRC init)
+# Netdata (logs to /var/log/netdata/ via netdata config)
+# SnapRAID (logs to /var/log/snapraid-sync.log via cron script)
+
+# local0: reserved for future WBS application logging
+local0.*                        /var/log/wbs-app.log
+
+# ---- Include additional configs (e.g., per-service drop-ins) ---------------
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+# ---- After editing ---------------------------------------------------------
+# Validate config: rsyslogd -N1
+# Reload rsyslog:  rc-service rsyslog reload
+# Check all logs:  ls -la /var/log/

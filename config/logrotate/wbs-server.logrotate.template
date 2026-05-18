@@ -1,0 +1,104 @@
+# ============================================================
+# config/logrotate/wbs-server.logrotate.template
+# This is a TEMPLATE. Do not deploy directly.
+# Copy to /etc/logrotate.d/wbs-server and adapt before use.
+# Replace all {{PLACEHOLDER}} tokens with real values.
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# ============================================================
+
+# ---- WB's Systemdless Server — logrotate configuration --------------------
+# Rotates all flat-file logs produced by WBS services.
+# logrotate is called daily by cron (/etc/cron.daily/logrotate).
+# No journald or systemd-journald involved.
+
+# ---- Docker daemon logs ---------------------------------------------------
+/var/log/docker.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    # copytruncate: truncate the log in-place without moving it
+    # Required for services that keep the file descriptor open (like dockerd)
+}
+
+# ---- Tailscale daemon logs ------------------------------------------------
+/var/log/tailscaled.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+
+# ---- SnapRAID sync logs ---------------------------------------------------
+/var/log/snapraid-sync.log {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+
+# ---- SMART monitoring logs ------------------------------------------------
+/var/log/smart-test.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+
+# ---- WBS application log (FastAPI / web UI) ------------------------------
+/var/log/wbs-webui.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    size 50M      # Also rotate if log exceeds 50MB between daily runs
+    copytruncate
+}
+
+# ---- WBS custom app log (local0 facility from rsyslog) -------------------
+/var/log/wbs-app.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    # Signal rsyslog to re-open log file after rotation
+    postrotate
+        /usr/sbin/invoke-rc.d rsyslog rotate 2>/dev/null || true
+    endscript
+}
+
+# ---- Netdata (if managed here rather than by Netdata itself) -------------
+# Netdata rotates its own logs — only add here if you disable Netdata's
+# built-in log rotation.
+# /var/log/netdata/*.log {
+#     weekly
+#     rotate 4
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     sharedscripts
+#     copytruncate
+# }
+
+# ---- After deploying -------------------------------------------------------
+# Test logrotate config: logrotate --debug /etc/logrotate.d/wbs-server
+# Force a rotation now:  logrotate --force /etc/logrotate.d/wbs-server
+# Check rotation status: cat /var/lib/logrotate/status | grep wbs

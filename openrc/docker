@@ -1,0 +1,58 @@
+#!/sbin/openrc-run
+# =============================================================================
+# openrc/docker
+# Purpose:  OpenRC init script for the Docker CE daemon (dockerd).
+#           Manages Docker without systemd socket activation.
+#           Deploy to: /etc/init.d/docker
+#           Enable:    rc-update add docker default
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# Created:  2026-05-18
+# =============================================================================
+
+description="Docker CE Container Runtime"
+
+# Path to dockerd binary
+command="/usr/bin/dockerd"
+
+# dockerd arguments:
+#   --host=unix:///var/run/docker.sock  : standard Unix socket (no TCP)
+#   --log-driver=local                  : log to local flat files (no journald)
+#   --containerd=/run/containerd/containerd.sock : shared containerd socket
+command_args="--host=unix:///var/run/docker.sock --log-driver=local --containerd=/run/containerd/containerd.sock"
+
+# Run as root (required by dockerd)
+command_user="root"
+
+# PID file for OpenRC to track the process
+pidfile="/var/run/dockerd.pid"
+command_background="yes"
+
+# Log output to flat files — no journald dependency
+stdout_log="/var/log/docker.log"
+stderr_log="/var/log/docker.log"
+
+# TODO: verify no systemd.socket dependency — confirm dockerd does not attempt
+# to connect to systemd socket on startup on Devuan. Test: rc-service docker start
+# and check /var/log/docker.log for socket-related errors.
+
+depend() {
+    need net
+    need containerd
+    after net containerd
+    use dns logger
+}
+
+start_pre() {
+    # Create Docker runtime directories if they don't exist
+    checkpath --directory --owner root:root --mode 0710 /var/run/docker
+    checkpath --directory --owner root:root --mode 0710 /var/lib/docker
+    # Ensure log file exists and is writable
+    checkpath --file --owner root:root --mode 0640 /var/log/docker.log
+}
+
+stop_post() {
+    # Brief wait for containers to stop cleanly
+    sleep 1
+    # Remove the socket file if it persists after stop
+    rm -f /var/run/docker.sock
+}

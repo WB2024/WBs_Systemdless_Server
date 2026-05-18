@@ -1,0 +1,57 @@
+#!/sbin/openrc-run
+# =============================================================================
+# openrc/tailscaled
+# Purpose:  OpenRC init script for the Tailscale daemon (tailscaled).
+#           Manages Tailscale VPN without systemd. tailscaled writes its
+#           state to /var/lib/tailscale/ across restarts.
+#           Deploy to: /etc/init.d/tailscaled
+#           Enable:    rc-update add tailscaled default
+# Repository: https://github.com/WB2024/WBs_Systemdless_Server
+# Created:  2026-05-18
+# =============================================================================
+
+description="Tailscale VPN Daemon"
+
+# Path to tailscaled binary
+# TODO: test on live Devuan system — confirm binary path after apt install
+command="/usr/sbin/tailscaled"
+
+# tailscaled arguments:
+#   --state       : persistent state file (survives reboots, stores auth keys)
+#   --socket      : Unix socket for tailscale CLI communication
+#   --tun         : TUN device name (default: tailscale0)
+#   --port        : UDP port for WireGuard traffic (0 = random, 41641 = stable)
+command_args="--state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --tun=tailscale0 --port=41641"
+
+command_user="root"
+pidfile="/var/run/tailscaled.pid"
+command_background="yes"
+
+stdout_log="/var/log/tailscaled.log"
+stderr_log="/var/log/tailscaled.log"
+
+depend() {
+    need net
+    after net
+    use dns logger
+}
+
+start_pre() {
+    # Ensure state directory exists (persists auth across reboots)
+    checkpath --directory --owner root:root --mode 0700 /var/lib/tailscale
+    # Ensure socket directory exists
+    checkpath --directory --owner root:root --mode 0755 /run/tailscale
+    # Ensure log file exists
+    checkpath --file --owner root:root --mode 0640 /var/log/tailscaled.log
+
+    # Load the TUN kernel module if not already loaded
+    if ! lsmod | grep -q '^tun '; then
+        einfo "Loading tun kernel module..."
+        modprobe tun || ewarn "Failed to load tun module — already built-in or unavailable"
+    fi
+}
+
+stop_post() {
+    # Remove socket on stop
+    rm -f /run/tailscale/tailscaled.sock
+}
