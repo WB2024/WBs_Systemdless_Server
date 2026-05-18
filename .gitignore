@@ -1,0 +1,64 @@
+# ============================================================
+# WB's Systemdless Server — .gitignore
+# ============================================================
+
+# ------------------------------------------------------------
+# Documentation & AI context files
+# The docs/ folder contains AI knowledge files, ChatGPT/LLM
+# conversation logs, and any other reference docs that are
+# not part of the deployable codebase.
+# ------------------------------------------------------------
+docs/
+
+# Individual AI/knowledge markdown files at repo root
+Knowledge.md
+ChatGPT-*.md
+AI_*.md
+*_AI.md
+NOTES.md
+
+# ------------------------------------------------------------
+# Environment / secrets
+# ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------------------------
+# Python
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+venv/
+.venv/
+ENV/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ------------------------------------------------------------
+# OS / editor junk
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
